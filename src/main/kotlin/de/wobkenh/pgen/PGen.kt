@@ -12,10 +12,11 @@ import kotlin.system.exitProcess
 
 class PGen : CliktCommand() {
 
-    val packagePath: String by option(help = "The package to analyze (OPTIONAL)").default("")
-    val directory: File? by option(help = "Sources root directory (REQUIRED)").file()
-    val outputFile: File by option(help = "Output file for PUML Class Diagram").file().default(File("output.puml"))
-    val newLine = System.lineSeparator()
+    private val packagePath: String by option(help = "The package to analyze (OPTIONAL)").default("")
+    private val directory: File? by option(help = "Sources root directory (REQUIRED)").file()
+    private val outputFile: File by option(help = "Output file for PUML Class Diagram").file().default(File("output.puml"))
+    private val newLine = System.lineSeparator()
+    private val fileSeparator = File.separator
 
     override fun run() {
         if (directory == null) {
@@ -35,28 +36,34 @@ class PGen : CliktCommand() {
             }
         }
 
-        val pumlString = File(directory, packagePath.replace(".", "/")).walk()
+        writePuml(generatePumlBody())
+    }
+
+    fun generatePumlBody(): String =
+        File(directory, packagePath.replace(".", fileSeparator)).walk()
             .filter { it.isFile }
             .flatMap { file ->
                 val compilationUnit = StaticJavaParser.parse(file)
                 compilationUnit.findAll(ClassOrInterfaceDeclaration::class.java).map { clazz ->
-                    val extendedClassName =
-                        if (clazz.extendedTypes.isNonEmpty) clazz.extendedTypes[0].nameAsString else ""
+                    val extendedClassName = if (clazz.extendedTypes.isNonEmpty) {
+                        clazz.extendedTypes[0].nameAsString
+                    } else ""
                     val implementedClassNames = clazz.implementedTypes.map { it.nameAsString }
-                    ClassDescriptor(clazz.nameAsString, extendedClassName, implementedClassNames)
+                    val type = if (clazz.isInterface) "interface" else "class"
+                    ClassDescriptor(clazz.nameAsString, type, extendedClassName, implementedClassNames)
                 }.asSequence()
             }.flatMap { classDescriptor ->
-                println("Found class ${classDescriptor.className} extending ${classDescriptor.extendedClassName} implementing interfaces ${classDescriptor.implementedClassNames}")
-                // single lines
+                println("Found ${classDescriptor.type} ${classDescriptor.className} extending ${classDescriptor.extendedClassName} implementing interfaces ${classDescriptor.implementedClassNames}")
+                // Creating the lines
                 val separator = "'------------------------"
-                val classDefinition = "class ${classDescriptor.className}"
+                val classDefinition = "${classDescriptor.type} ${classDescriptor.className}"
                 val classExtension = if (classDescriptor.extendedClassName.isNotEmpty()) {
-                    "${classDescriptor.className} -> ${classDescriptor.extendedClassName}"
+                    "${classDescriptor.className} --|> ${classDescriptor.extendedClassName}"
                 } else ""
                 val classImplementations =
                     classDescriptor.implementedClassNames.map { "${classDescriptor.className} --> $it" }
 
-                // Creating the list
+                // Creating the list using the lines
                 val lines = mutableListOf(separator, "", classDefinition)
                 if (classExtension.isNotEmpty()) {
                     lines.add(classExtension)
@@ -66,6 +73,7 @@ class PGen : CliktCommand() {
                 lines.asSequence()
             }.joinToString(newLine)
 
+    fun writePuml(pumlBodyString: String) {
         val header = listOf(
             "@startuml",
             "/'",
@@ -75,7 +83,7 @@ class PGen : CliktCommand() {
             "'/"
         ).joinToString(newLine)
         val footer = "@enduml"
-        outputFile.writeText(listOf(header, pumlString, footer).joinToString(newLine))
+        outputFile.writeText(listOf(header, pumlBodyString, footer).joinToString(newLine))
     }
 
 }
