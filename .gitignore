@@ -24,3 +24,5 @@ hs_err_pid*
 
 # Output directory
 /out
+# Default puml location
+/output.puml
