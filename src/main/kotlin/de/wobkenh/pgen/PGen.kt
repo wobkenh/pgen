@@ -18,7 +18,9 @@ class PGen : CliktCommand() {
     // CLI Arguments
     private val packagePath: String by option(help = "The package to analyze (OPTIONAL)").default("")
     private val directory: File? by option(help = "Sources root directory (REQUIRED)").file()
-    private val outputFile: File by option(help = "Output file for PUML Class Diagram. Default output.puml").file().default(File("output.puml"))
+    private val outputFile: File by option(help = "Output file for PUML Class Diagram. Default output.puml").file().default(
+        File("output.puml")
+    )
     private val methodVisibility: Visibility by option(help = "Which methods to show. Default NONE").choice(
         "NONE" to Visibility.NONE,
         "PRIVATE" to Visibility.PRIVATE,
@@ -42,6 +44,7 @@ class PGen : CliktCommand() {
     private val leftToRightDirection: Boolean by option(help = "Changes the direction of the diagram to 'left to right'. Default 'top to bottom'").flag(
         default = false
     )
+    private val showPackage: Boolean by option(help = "Show packages").flag(default = false)
 
 
     // Other stuff
@@ -71,9 +74,51 @@ class PGen : CliktCommand() {
             println("Filtering for base class $baseClass")
             classDescriptors = BaseClassTreeFilter.filterForBaseClass(classDescriptors, this.baseClass)
         }
+        if (showPackage) {
+            classDescriptors = enrichPackageNames(classDescriptors)
+        }
 
         val pumlBody = generatePumlBody(classDescriptors)
         writePuml(pumlBody)
+    }
+
+    private fun enrichPackageNames(classDescriptorsSequence: Sequence<ClassDescriptor>): Sequence<ClassDescriptor> {
+        val classDescriptorsList = classDescriptorsSequence.toList()
+        val classDescriptorsMap = classDescriptorsList.groupBy({ it.className }, { it.packageName })
+        return classDescriptorsList.map { classDescriptor ->
+            val extendClassName = classDescriptor.extendedClassName.className
+            if (extendClassName.isNotEmpty()) {
+                val extendClasses = classDescriptorsMap[extendClassName]
+                if (extendClasses != null) {
+                    val extendClassPackage = extendClasses[0]
+                    if (extendClasses.size > 1) {
+                        println(
+                            "[WARN] Found multiple classes with name $extendClassName. Choosing the first one " +
+                                    "(package: '$extendClassPackage') for extension of ${classDescriptor.className}"
+                        )
+                    }
+                    classDescriptor.extendedClassName.packageName = extendClassPackage
+                } else {
+                    println("[INFO] Could not find class $extendClassName in inspected package")
+                }
+            }
+            classDescriptor.implementedClassNames.filter { it.className.isNotEmpty() }.forEach { implementDesciptor ->
+                val implementedClasses = classDescriptorsMap[implementDesciptor.className]
+                if (implementedClasses != null) {
+                    val implementedClassPackage = implementedClasses[0]
+                    if (implementedClasses.size > 1) {
+                        println(
+                            "[WARN] Found multiple interfaces with name ${implementDesciptor.className}. Choosing the first one " +
+                                    "(package: '$implementedClassPackage') for implementation ${classDescriptor.className}"
+                        )
+                    }
+                    implementDesciptor.packageName = implementedClassPackage
+                } else {
+                    println("[INFO] Could not find interface ${implementDesciptor.className} in inspected package")
+                }
+            }
+            classDescriptor
+        }.asSequence()
     }
 
     private fun generateClassDescriptors(): Sequence<ClassDescriptor> =
@@ -81,8 +126,10 @@ class PGen : CliktCommand() {
             .filter { it.isFile }
             .flatMap { file -> generateClassDescriptor(file).asSequence() }
 
-    private fun generateClassDescriptor(file: File): List<ClassDescriptor> =
-        StaticJavaParser.parse(file).findAll(ClassOrInterfaceDeclaration::class.java).map { clazz ->
+    private fun generateClassDescriptor(file: File): List<ClassDescriptor> {
+        val compilationUnit = StaticJavaParser.parse(file)
+        val packageName = compilationUnit.packageDeclaration.get().nameAsString
+        return compilationUnit.findAll(ClassOrInterfaceDeclaration::class.java).map { clazz ->
             val extendedClassName = if (clazz.extendedTypes.isNonEmpty) {
                 clazz.extendedTypes[0].nameAsString
             } else ""
@@ -103,8 +150,18 @@ class PGen : CliktCommand() {
                         )
                     }
             } else listOf()
-            ClassDescriptor(clazz.nameAsString, type, extendedClassName, implementedClassNames, methods, arguments)
+            println("parsed ${clazz.nameAsString}")
+            ClassDescriptor(
+                packageName,
+                clazz.nameAsString,
+                type,
+                ExtendsDescriptor("", extendedClassName),
+                implementedClassNames.map { ImplementsDescriptor("", it) },
+                methods,
+                arguments
+            )
         }
+    }
 
     private fun generatePumlBody(classDescriptors: Sequence<ClassDescriptor>): String =
         classDescriptors
@@ -116,11 +173,15 @@ class PGen : CliktCommand() {
 
         // Creating the lines
         val separator = "'------------------------"
-        val classDefinition = "${classDescriptor.type} ${classDescriptor.className} {"
-        val classExtension = if (classDescriptor.extendedClassName.isNotEmpty()) {
-            "${classDescriptor.className} --|> ${classDescriptor.extendedClassName}"
+        val packageName = getPackageName(classDescriptor.packageName)
+        val className = packageName + classDescriptor.className
+        val classDefinition = "${classDescriptor.type} $className {"
+        val classExtension = if (classDescriptor.extendedClassName.className.isNotEmpty()) {
+            "$className --|> ${getPackageName(classDescriptor.extendedClassName.packageName)}${classDescriptor.extendedClassName.className}"
         } else ""
-        val classImplementations = classDescriptor.implementedClassNames.map { "${classDescriptor.className} --|> $it" }
+        val classImplementations = classDescriptor.implementedClassNames
+            .map { "${getPackageName(it.packageName)}${it.className}" }
+            .map { "$className --|> $it" }
         val methods = classDescriptor.methods.map { "${getVisibilitySign(it.visibility)} ${it.signature}" }
         val attributes = classDescriptor.attribtues.map { "${getVisibilitySign(it.visibility)} ${it.type} ${it.name}" }
 
@@ -136,6 +197,8 @@ class PGen : CliktCommand() {
         lines.add("")
         return lines
     }
+
+    private fun getPackageName(packageName: String) = if (this.showPackage && packageName.isNotEmpty()) "$packageName." else ""
 
 
     private fun writePuml(pumlBodyString: String) {

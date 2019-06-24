@@ -13,7 +13,7 @@ object BaseClassTreeFilter {
                 while (type == null || type != "class" && type != "abstract class" && type != "interface") {
                     type = TermUi.prompt(text = "Choose type of $baseClass:", default = "class")
                 }
-                baseClassDescriptor = ClassDescriptor(baseClass, type, "", listOf(), listOf(), listOf())
+                baseClassDescriptor = ClassDescriptor("", baseClass, type, ExtendsDescriptor("", ""), listOf(), listOf(), listOf())
             } else {
                 exitProcess(1)
             }
@@ -22,7 +22,12 @@ object BaseClassTreeFilter {
     }
 
     private fun listExtendingClasses(classDescriptors: Sequence<ClassDescriptor>, baseClass: String): Sequence<ClassDescriptor> {
-        val extendingClassDescriptors = classDescriptors.filter { it.extendedClassName == baseClass }
-        return extendingClassDescriptors + extendingClassDescriptors.flatMap { listExtendingClasses(classDescriptors, it.className) }
+        val extendingClassDescriptors = classDescriptors.filter { it.extendedClassName.className == baseClass }
+        return extendingClassDescriptors + extendingClassDescriptors.flatMap {
+            listExtendingClasses(
+                classDescriptors,
+                it.className
+            )
+        }
     }
 }
