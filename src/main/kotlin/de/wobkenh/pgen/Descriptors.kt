@@ -6,10 +6,11 @@ data class ClassDescriptor(
     val packageName: String,
     val className: String,
     val type: String,
-    val extendedClassName: ExtendsDescriptor,
-    val implementedClassNames: List<ImplementsDescriptor>,
+    val extendedClass: ExtendsDescriptor,
+    val implementedClasses: List<ImplementsDescriptor>,
     val methods: List<MethodDescriptor>,
-    val attribtues: List<FieldDescriptor>
+    val attribtues: List<FieldDescriptor>,
+    val dependencies: List<DependecyDescriptor>
 )
 
 data class MethodDescriptor(
@@ -24,11 +25,16 @@ data class FieldDescriptor(
 )
 
 data class ExtendsDescriptor(
-    var packageName: String, // var, can only be determined after all classes have been parsed
+    val packageName: String, // var, can only be determined after all classes have been parsed
     val className: String
 )
 
 data class ImplementsDescriptor(
-    var packageName: String, // var, can only be determined after all classes have been parsed
+    val packageName: String, // var, can only be determined after all classes have been parsed
+    val className: String
+)
+
+data class DependecyDescriptor(
+    val packageName: String,
     val className: String
 )
