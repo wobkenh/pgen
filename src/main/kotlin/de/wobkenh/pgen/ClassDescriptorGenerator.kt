@@ -29,6 +29,7 @@ class ClassDescriptorGenerator(
             .flatMap { file -> generateClassDescriptor(file).asSequence() }
 
     private fun generateClassDescriptor(file: File): List<ClassDescriptor> {
+        // TODO: Always at least project dir resolving for extending/implementing classes
         StaticJavaParser.getConfiguration().setSymbolResolver(getSymbolResolver())
         val compilationUnit = StaticJavaParser.parse(file)
         val packageName = compilationUnit.packageDeclaration.get().nameAsString
@@ -98,7 +99,7 @@ class ClassDescriptorGenerator(
         return if (index >= 0) {
             qualifiedName.substring(0, index)
         } else {
-            qualifiedName
+            ""
         }
     }
 
