@@ -24,5 +24,5 @@ class BaseClassTreeFilterTest {
     }
 
     private fun createTestClassDescriptor(name: String, type: String, extendName: String): ClassDescriptor =
-        ClassDescriptor(name, type, extendName, listOf(), listOf(), listOf())
+        ClassDescriptor("", name, type, ExtendsDescriptor("", extendName), listOf(), listOf(), listOf(), listOf())
 }

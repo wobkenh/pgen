@@ -18,7 +18,8 @@ class ClassDescriptorGenerator(
     private val packagePath: String,
     private val methodVisibility: Visibility,
     private val attributeVisibility: Visibility,
-    private val dependencyLevel: DependencyLevel
+    private val dependencyLevel: DependencyLevel,
+    private val showPackage: Boolean
 ) {
     private val fileSeparator = File.separator
     private val logger = LoggerFactory.getLogger("")
@@ -49,14 +50,16 @@ class ClassDescriptorGenerator(
                     .filter { methodVisibility.isLowerOrEqual(it.accessSpecifier) || clazz.isInterface }
                     .map { MethodDescriptor(it.signature.asString(), it.accessSpecifier) }
             } else listOf()
-            val attributes = clazz.fields
-                .filter { attributeVisibility.isLowerOrEqual(it.accessSpecifier) }
-                .map { field ->
-                    FieldDescriptor(
-                        field.variables.joinToString(", ") { it.nameAsString },
-                        field.elementType.asString(), field.accessSpecifier
-                    )
-                }
+            val attributes = if (attributeVisibility != Visibility.NONE) {
+                clazz.fields
+                    .filter { attributeVisibility.isLowerOrEqual(it.accessSpecifier) }
+                    .map { field ->
+                        FieldDescriptor(
+                            field.variables.joinToString(", ") { it.nameAsString },
+                            field.elementType.asString(), field.accessSpecifier
+                        )
+                    }
+            } else listOf()
             val dependencies = if (dependencyLevel != DependencyLevel.NONE) {
                 getDependencies(clazz)
                     .map { Pair(it, resolveQualifiedName(it)) }
@@ -83,6 +86,7 @@ class ClassDescriptorGenerator(
         return try {
             type.resolve().qualifiedName
         } catch (e: UnsolvedSymbolException) {
+            logger.trace("Could not resolve full qualified name of ${type.nameAsString}, using class name instead")
             type.nameAsString
         }
     }
@@ -105,7 +109,7 @@ class ClassDescriptorGenerator(
 
     private fun getSymbolResolver(): JavaSymbolSolver {
         val typeSolvers = mutableListOf<TypeSolver>()
-        if (dependencyLevel >= DependencyLevel.INTERNAL) {
+        if (dependencyLevel >= DependencyLevel.INTERNAL || showPackage) {
             typeSolvers.add(JavaParserTypeSolver(directory))
         }
         if (dependencyLevel >= DependencyLevel.EXTERNAL) {

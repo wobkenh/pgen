@@ -71,7 +71,8 @@ class PGen : CliktCommand() {
                 packagePath,
                 methodVisibility,
                 attributeVisibility,
-                dependencyLevel
+                dependencyLevel,
+                showPackage
             ).generateClassDescriptors()
 
         if (baseClass.isNotEmpty()) {

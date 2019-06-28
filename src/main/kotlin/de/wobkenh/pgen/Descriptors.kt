@@ -9,7 +9,7 @@ data class ClassDescriptor(
     val extendedClass: ExtendsDescriptor,
     val implementedClasses: List<ImplementsDescriptor>,
     val methods: List<MethodDescriptor>,
-    val attribtues: List<FieldDescriptor>,
+    val attributes: List<FieldDescriptor>,
     val dependencies: List<DependecyDescriptor>
 )
 
