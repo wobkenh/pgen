@@ -129,7 +129,7 @@ class PGen : CliktCommand() {
         if (this.scale != null) {
             logger.info("# Scale $scale")
         }
-        if (leftToRightDirection) logger.info("# Direction left to right") else logger.info("- Direction top to bottom")
+        if (leftToRightDirection) logger.info("# Direction left to right") else logger.info("# Direction top to bottom")
         if (this.showPackage) {
             logger.info("# Showing Packages")
         }

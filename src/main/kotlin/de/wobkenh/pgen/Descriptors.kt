@@ -10,12 +10,13 @@ data class ClassDescriptor(
     val implementedClasses: List<ImplementsDescriptor>,
     val methods: List<MethodDescriptor>,
     val attributes: List<FieldDescriptor>,
-    val dependencies: List<DependecyDescriptor>
+    val dependencies: List<DependencyDescriptor>
 )
 
 data class MethodDescriptor(
     val signature: String,
-    val visibility: AccessSpecifier
+    val visibility: AccessSpecifier,
+    val returnType: String
 )
 
 data class FieldDescriptor(
@@ -34,7 +35,7 @@ data class ImplementsDescriptor(
     val className: String
 )
 
-data class DependecyDescriptor(
+data class DependencyDescriptor(
     val packageName: String,
     val className: String
 )

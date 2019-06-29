@@ -29,7 +29,7 @@ class PumlBodyGenerator(
         val classImplementations = classDescriptor.implementedClasses
             .map { "${getPackageName(it.packageName)}${it.className}" }
             .map { "$className --|> $it" }
-        val methods = classDescriptor.methods.map { "${getVisibilitySign(it.visibility)} ${it.signature}" }
+        val methods = classDescriptor.methods.map { "${getVisibilitySign(it.visibility)} ${it.returnType} ${it.signature}" }
         val attributes = classDescriptor.attributes.map { "${getVisibilitySign(it.visibility)} ${it.type} ${it.name}" }
         val dependencies = classDescriptor.dependencies
             .map { "${getPackageName(it.packageName)}${it.className}" }

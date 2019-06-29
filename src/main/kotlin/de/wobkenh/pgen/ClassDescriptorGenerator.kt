@@ -48,7 +48,7 @@ class ClassDescriptorGenerator(
             val methods = if (methodVisibility != Visibility.NONE) {
                 clazz.methods
                     .filter { methodVisibility.isLowerOrEqual(it.accessSpecifier) || clazz.isInterface }
-                    .map { MethodDescriptor(it.signature.asString(), it.accessSpecifier) }
+                    .map { MethodDescriptor(it.signature.asString(), it.accessSpecifier, it.typeAsString) }
             } else listOf()
             val attributes = if (attributeVisibility != Visibility.NONE) {
                 clazz.fields
@@ -64,7 +64,7 @@ class ClassDescriptorGenerator(
                 getDependencies(clazz)
                     .map { Pair(it, resolveQualifiedName(it)) }
                     .distinctBy { (_, qualifiedName) -> qualifiedName }
-                    .map { (clazz, qualifiedName) -> DependecyDescriptor(getPackageName(qualifiedName), clazz.nameAsString) }
+                    .map { (clazz, qualifiedName) -> DependencyDescriptor(getPackageName(qualifiedName), clazz.nameAsString) }
             } else listOf()
             dependencies.forEach { logger.trace("found dependency ${it.className}") }
 
