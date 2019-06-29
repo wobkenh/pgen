@@ -55,13 +55,15 @@ This means that if you select method visibility "protected", then all methods wi
 The EXTERNAL level is not finished yet and right now is behaving like INTERNAL. 
 In the future, this will try to resolve dependencies from external libraries. 
 The ALL level will try to resolve dependencies from internal and external projects as well as java classes (e.g. List, String).
-- When using the "show-package" combined with any dependency level, you might want to limit the scope of the class diagram using the output and package path options.
+- When using any dependency level other than NONE, you might want to limit the scope of the class diagram using the output and package path options.
 The reasaon for this is that the performance will degrade as the java parser tries to resolve the package names of the dependencies.
 Of course, you are always welcome to test out the limits.  
+- When using the base class option, the base class does not need to be in the current scope. You can e.g. use the base class "Exception" 
+to get all classes in your scope that extend Exception and their subclasses.
 
 ## Authors
 
-Henning Wobken ([henning.wobken@simplex24.de](#mailto:henning.wobken@simplex24.de))
+Henning Wobken ([henning.wobken@simplex24.de](mailto:henning.wobken@simplex24.de))
 
 ## License
 

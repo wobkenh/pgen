@@ -31,7 +31,6 @@ class ClassDescriptorGenerator(
 
     private fun generateClassDescriptor(file: File): List<ClassDescriptor> {
         logger.trace("Generating descriptor for ${file.absolutePath}")
-        // TODO: Always at least project dir resolving for extending/implementing classes
         StaticJavaParser.getConfiguration().setSymbolResolver(getSymbolResolver())
         val compilationUnit = StaticJavaParser.parse(file)
         val packageName = compilationUnit.packageDeclaration.get().nameAsString
