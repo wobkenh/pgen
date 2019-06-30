@@ -27,4 +27,4 @@ hs_err_pid*
 # Default puml location
 /output.puml
 # deploy script for jar
-/sh/deploy.sh
+/sh/deploy.bash
