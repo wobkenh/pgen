@@ -43,6 +43,9 @@ class PGen : CliktCommand() {
         default = false
     )
     private val showPackage: Boolean by option(help = "Show packages, Default false").flag(default = false)
+    private val showEnumArguments: Boolean by option(help = "Show arguments of enum entries (values for constructor), Default false").flag(
+        default = false
+    )
     private val dependencyLevel: DependencyLevel by option(help = "Which dependencies to show in the diagram").convert { it.toUpperCase() }.choice(
         "NONE" to DependencyLevel.NONE,
         "INTERNAL" to DependencyLevel.INTERNAL,
@@ -72,7 +75,8 @@ class PGen : CliktCommand() {
                 methodVisibility,
                 attributeVisibility,
                 dependencyLevel,
-                showPackage
+                showPackage,
+                showEnumArguments
             ).generateClassDescriptors()
 
         if (baseClass.isNotEmpty()) {
@@ -80,7 +84,7 @@ class PGen : CliktCommand() {
             classDescriptors = BaseClassTreeFilter.filterForBaseClass(classDescriptors, baseClass)
         }
 
-        val pumlBody = PumlBodyGenerator(showPackage, dependencyLevel).generatePumlBody(classDescriptors)
+        val pumlBody = PumlBodyGenerator(showPackage, showEnumArguments).generatePumlBody(classDescriptors)
         PumlWriter.writePuml(
             pumlBody,
             packagePath,

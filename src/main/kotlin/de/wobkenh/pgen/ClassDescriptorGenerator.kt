@@ -3,6 +3,9 @@ package de.wobkenh.pgen
 import com.github.javaparser.StaticJavaParser
 import com.github.javaparser.ast.Node
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration
+import com.github.javaparser.ast.body.EnumDeclaration
+import com.github.javaparser.ast.nodeTypes.NodeWithImplements
+import com.github.javaparser.ast.nodeTypes.NodeWithMembers
 import com.github.javaparser.ast.type.ClassOrInterfaceType
 import com.github.javaparser.resolution.UnsolvedSymbolException
 import com.github.javaparser.symbolsolver.JavaSymbolSolver
@@ -19,21 +22,23 @@ class ClassDescriptorGenerator(
     private val methodVisibility: Visibility,
     private val attributeVisibility: Visibility,
     private val dependencyLevel: DependencyLevel,
-    private val showPackage: Boolean
+    private val showPackage: Boolean,
+    private val showEnumArguments: Boolean
 ) {
     private val fileSeparator = File.separator
     private val logger = LoggerFactory.getLogger("")
 
-    fun generateClassDescriptors(): Sequence<ClassDescriptor> =
+    fun generateClassDescriptors(): Sequence<ClassOrEnumDescriptor> =
         File(directory, packagePath.replace(".", fileSeparator)).walk()
             .filter { it.isFile && it.extension == "java" }
             .flatMap { file -> generateClassDescriptor(file).asSequence() }
 
-    private fun generateClassDescriptor(file: File): List<ClassDescriptor> {
+    private fun generateClassDescriptor(file: File): List<ClassOrEnumDescriptor> {
         logger.trace("Generating descriptor for ${file.absolutePath}")
         StaticJavaParser.getConfiguration().setSymbolResolver(getSymbolResolver())
         val compilationUnit = StaticJavaParser.parse(file)
         val packageName = compilationUnit.packageDeclaration.get().nameAsString
+
         return compilationUnit.findAll(ClassOrInterfaceDeclaration::class.java).map { clazz ->
             val extendedClassName = if (clazz.extendedTypes.isNonEmpty) {
                 clazz.extendedTypes[0].nameAsString
@@ -42,24 +47,10 @@ class ClassDescriptorGenerator(
                 resolveQualifiedName(clazz.extendedTypes[0])
             } else ""
             val extendedPackageName = getPackageName(extendedClassNameQualified)
-            val implementedClassDescriptors = clazz.implementedTypes
-                .map { ImplementsDescriptor(getPackageName(resolveQualifiedName(it)), it.nameAsString) }
+            val implementedClassDescriptors = getImplementedClassesClass(clazz)
             val type = if (clazz.isInterface) "interface" else if (clazz.isAbstract) "abstract class" else "class"
-            val methods = if (methodVisibility != Visibility.NONE) {
-                clazz.methods
-                    .filter { methodVisibility.isLowerOrEqual(it.accessSpecifier) || clazz.isInterface }
-                    .map { MethodDescriptor(it.signature.asString(), it.accessSpecifier, it.typeAsString) }
-            } else listOf()
-            val attributes = if (attributeVisibility != Visibility.NONE) {
-                clazz.fields
-                    .filter { attributeVisibility.isLowerOrEqual(it.accessSpecifier) }
-                    .map { field ->
-                        FieldDescriptor(
-                            field.variables.joinToString(", ") { it.nameAsString },
-                            field.elementType.asString(), field.accessSpecifier
-                        )
-                    }
-            } else listOf()
+            val methods = getMethodsClass(clazz, clazz.isInterface)
+            val attributes = getAttributesClass(clazz)
             val dependencies = if (dependencyLevel != DependencyLevel.NONE) {
                 getDependencies(clazz)
                     .map { Pair(it, resolveQualifiedName(it)) }
@@ -72,14 +63,70 @@ class ClassDescriptorGenerator(
             ClassDescriptor(
                 packageName,
                 clazz.nameAsString,
-                type,
-                ExtendsDescriptor(extendedPackageName, extendedClassName),
-                implementedClassDescriptors,
                 methods,
                 attributes,
-                dependencies
+                dependencies,
+                implementedClassDescriptors,
+                type,
+                ExtendsDescriptor(extendedPackageName, extendedClassName)
             )
-        }
+        }.union(compilationUnit.findAll(EnumDeclaration::class.java).map { enum ->
+            val dependencies = if (dependencyLevel != DependencyLevel.NONE) {
+                getDependencies(enum)
+                    .map { Pair(it, resolveQualifiedName(it)) }
+                    .distinctBy { (_, qualifiedName) -> qualifiedName }
+                    .map { (clazz, qualifiedName) -> DependencyDescriptor(getPackageName(qualifiedName), clazz.nameAsString) }
+            } else listOf()
+            requireNotNull(enum)
+            val methods = getMethodsEnum(enum)
+            val attributes = getAttributesEnum(enum)
+            dependencies.forEach { logger.trace("found dependency ${it.className}") }
+            val values = enum.entries.map {
+                ValueDescriptor(it.nameAsString, if (showEnumArguments) it.arguments.joinToString(", ") else "")
+            }
+            val implementedClassDescriptors = getImplementedClassesEnum(enum)
+            EnumDescriptor(
+                packageName,
+                enum.nameAsString,
+                methods,
+                attributes,
+                dependencies,
+                implementedClassDescriptors,
+                values
+            )
+        }).toList()
+    }
+
+    private fun getImplementedClassesClass(node: NodeWithImplements<ClassOrInterfaceDeclaration>) = getImplementedClassesBase(node)
+    private fun getImplementedClassesEnum(node: NodeWithImplements<EnumDeclaration>) = getImplementedClassesBase(node)
+    private fun <T : Node> getImplementedClassesBase(node: NodeWithImplements<T>): List<ImplementsDescriptor> =
+        node.implementedTypes
+            .map { ImplementsDescriptor(getPackageName(resolveQualifiedName(it)), it.nameAsString) }
+
+    private fun getAttributesEnum(node: NodeWithMembers<EnumDeclaration>) = getAttributesBase(node)
+    private fun getAttributesClass(node: NodeWithMembers<ClassOrInterfaceDeclaration>) = getAttributesBase(node)
+    private fun <T : Node> getAttributesBase(node: NodeWithMembers<T>): List<FieldDescriptor> =
+        if (attributeVisibility != Visibility.NONE) {
+            node.fields
+                .filter { attributeVisibility.isLowerOrEqual(it.accessSpecifier) }
+                .map { field ->
+                    FieldDescriptor(
+                        field.variables.joinToString(", ") { it.nameAsString },
+                        field.elementType.asString(), field.accessSpecifier
+                    )
+                }
+        } else listOf()
+
+    private fun getMethodsEnum(node: NodeWithMembers<EnumDeclaration>) = getMethodsBase(node, false)
+    private fun getMethodsClass(node: NodeWithMembers<ClassOrInterfaceDeclaration>, isInterface: Boolean) =
+        getMethodsBase(node, isInterface)
+
+    private fun <T : Node> getMethodsBase(node: NodeWithMembers<T>, isInterface: Boolean): List<MethodDescriptor> {
+        return if (methodVisibility != Visibility.NONE) {
+            node.methods
+                .filter { methodVisibility.isLowerOrEqual(it.accessSpecifier) || isInterface }
+                .map { MethodDescriptor(it.signature.asString(), it.accessSpecifier, it.typeAsString) }
+        } else listOf()
     }
 
     private fun resolveQualifiedName(type: ClassOrInterfaceType): String {

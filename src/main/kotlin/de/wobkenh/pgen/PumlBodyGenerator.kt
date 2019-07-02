@@ -5,23 +5,28 @@ import org.slf4j.LoggerFactory
 
 class PumlBodyGenerator(
     private val showPackage: Boolean,
-    private val dependencyLevel: DependencyLevel
+    private val showEnumArguments: Boolean
 ) {
     private val logger = LoggerFactory.getLogger("")
     private val newLine = PGenConstants.newLine
 
-    fun generatePumlBody(classDescriptors: Sequence<ClassDescriptor>): String =
+    fun generatePumlBody(classDescriptors: Sequence<ClassOrEnumDescriptor>): String =
         classDescriptors
-            .flatMap { classDescriptor -> generatePumlFromClassDescriptor(classDescriptor).asSequence() }
+            .flatMap { classDescriptor ->
+                when (classDescriptor) {
+                    is ClassDescriptor -> generatePumlFromClassDescriptor(classDescriptor).asSequence()
+                    is EnumDescriptor -> generatePumlFromEnumDescriptor(classDescriptor).asSequence()
+                    else -> throw RuntimeException("Could not create PUML String for $classDescriptor")
+                }
+            }
             .joinToString(newLine)
 
     private fun generatePumlFromClassDescriptor(classDescriptor: ClassDescriptor): List<String> {
-        logger.debug("Found ${classDescriptor.type} ${classDescriptor.className} extending ${classDescriptor.extendedClass} implementing interfaces ${classDescriptor.implementedClasses}")
-
         // Creating the lines
         val separator = "'------------------------"
         val packageName = getPackageName(classDescriptor.packageName)
         val className = packageName + classDescriptor.className
+
         val classDefinition = "${classDescriptor.type} $className {"
         val classExtension = if (classDescriptor.extendedClass.className.isNotEmpty()) {
             "$className --|> ${getPackageName(classDescriptor.extendedClass.packageName)}${classDescriptor.extendedClass.className}"
@@ -29,11 +34,9 @@ class PumlBodyGenerator(
         val classImplementations = classDescriptor.implementedClasses
             .map { "${getPackageName(it.packageName)}${it.className}" }
             .map { "$className --|> $it" }
-        val methods = classDescriptor.methods.map { "${getVisibilitySign(it.visibility)} ${it.returnType} ${it.signature}" }
-        val attributes = classDescriptor.attributes.map { "${getVisibilitySign(it.visibility)} ${it.type} ${it.name}" }
-        val dependencies = classDescriptor.dependencies
-            .map { "${getPackageName(it.packageName)}${it.className}" }
-            .map { "$className ..> $it" }
+        val methods = getMethods(classDescriptor)
+        val attributes = getAttributes(classDescriptor)
+        val dependencies = getDependencies(classDescriptor, className)
 
         // Creating the list using the lines
         val lines = mutableListOf(separator, "", classDefinition)
@@ -48,6 +51,38 @@ class PumlBodyGenerator(
         lines.add("")
         return lines
     }
+
+    private fun generatePumlFromEnumDescriptor(enumDescriptor: EnumDescriptor): List<String> {
+        // Creating the lines
+        val separator = "'------------------------"
+        val packageName = getPackageName(enumDescriptor.packageName)
+        val className = packageName + enumDescriptor.className
+        val methods = getMethods(enumDescriptor)
+        val attributes = getAttributes(enumDescriptor)
+        val dependencies = getDependencies(enumDescriptor, className)
+        val values = enumDescriptor.values.map { "${it.name} ${if (showEnumArguments) "(${it.parameters})" else ""}" }
+
+        // Creating the list using the lines
+        val lines = mutableListOf(separator, "", "enum $className {")
+        lines.addAll(values)
+        lines.addAll(attributes)
+        lines.addAll(methods)
+        lines.add("}")
+        lines.addAll(dependencies)
+        lines.add("")
+        return lines
+    }
+
+    private fun getMethods(classOrEnumDescriptor: ClassOrEnumDescriptor) =
+        classOrEnumDescriptor.methods.map { "${getVisibilitySign(it.visibility)} ${it.returnType} ${it.signature}" }
+
+    private fun getAttributes(classOrEnumDescriptor: ClassOrEnumDescriptor) =
+        classOrEnumDescriptor.attributes.map { "${getVisibilitySign(it.visibility)} ${it.type} ${it.name}" }
+
+    private fun getDependencies(classOrEnumDescriptor: ClassOrEnumDescriptor, className: String) =
+        classOrEnumDescriptor.dependencies
+            .map { "${getPackageName(it.packageName)}${it.className}" }
+            .map { "$className ..> $it" }
 
     private fun getPackageName(packageName: String) = if (showPackage && packageName.isNotEmpty()) "$packageName." else ""
 

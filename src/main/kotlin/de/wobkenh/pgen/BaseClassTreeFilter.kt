@@ -4,7 +4,7 @@ import com.github.ajalt.clikt.output.TermUi
 import kotlin.system.exitProcess
 
 object BaseClassTreeFilter {
-    fun filterForBaseClass(classDescriptorsSequence: Sequence<ClassDescriptor>, baseClass: String): Sequence<ClassDescriptor> {
+    fun filterForBaseClass(classDescriptorsSequence: Sequence<ClassOrEnumDescriptor>, baseClass: String): Sequence<ClassOrEnumDescriptor> {
         val classDescriptors = classDescriptorsSequence.toList()
         var baseClassDescriptor = classDescriptors.find { it.className == baseClass }
         if (baseClassDescriptor == null) {
@@ -15,7 +15,7 @@ object BaseClassTreeFilter {
                     type = TermUi.prompt(text = "Choose type of $baseClass:", default = "class")
                 }
                 baseClassDescriptor =
-                    ClassDescriptor("", baseClass, type, ExtendsDescriptor("", ""), listOf(), listOf(), listOf(), listOf())
+                    ClassDescriptor("", baseClass, listOf(), listOf(), listOf(), listOf(), type, ExtendsDescriptor("", ""))
             } else {
                 exitProcess(1)
             }
@@ -23,7 +23,7 @@ object BaseClassTreeFilter {
         return sequenceOf(baseClassDescriptor) + listExtendingClasses(classDescriptors, baseClass)
     }
 
-    private fun listExtendingClasses(classDescriptors: List<ClassDescriptor>, baseClass: String): Sequence<ClassDescriptor> {
+    private fun listExtendingClasses(classDescriptors: List<ClassOrEnumDescriptor>, baseClass: String): Sequence<ClassOrEnumDescriptor> {
         val extendingClassDescriptors = classDescriptors.filter { isDescendand(it, baseClass) }.asSequence()
         return extendingClassDescriptors + extendingClassDescriptors.flatMap {
             listExtendingClasses(
@@ -33,8 +33,11 @@ object BaseClassTreeFilter {
         }
     }
 
-    private fun isDescendand(classDescriptor: ClassDescriptor, baseClass: String): Boolean =
-        classDescriptor.extendedClass.className == baseClass ||
-                classDescriptor.implementedClasses.any { implementsDescriptor -> implementsDescriptor.className == baseClass }
+    private fun isDescendand(classDescriptor: ClassOrEnumDescriptor, baseClass: String): Boolean =
+        when (classDescriptor) {
+            is ClassDescriptor -> classDescriptor.extendedClass.className == baseClass ||
+                    classDescriptor.implementedClasses.any { implementsDescriptor -> implementsDescriptor.className == baseClass }
+            else -> false
+        }
 
 }

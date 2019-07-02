@@ -10,12 +10,14 @@ class ClassDescriptorGeneratorTest {
 
     @Test
     fun `test generation of class descriptors`() {
-        val generator = ClassDescriptorGenerator(directory, "testcase1", Visibility.NONE, Visibility.NONE, DependencyLevel.NONE, false)
+        val generator =
+            ClassDescriptorGenerator(directory, "testcase1", Visibility.NONE, Visibility.NONE, DependencyLevel.NONE, false, false)
         println(directory.absolutePath)
         val classDescriptors = generator.generateClassDescriptors().toList()
         assertEquals(4, classDescriptors.size)
         val testAbstract = classDescriptors.find { it.className == "TestAbstract" }
         requireNotNull(testAbstract)
+        if (testAbstract !is ClassDescriptor) throw RuntimeException("wrong type")
         assertEquals(listOf<FieldDescriptor>(), testAbstract.attributes)
         assertEquals(listOf<MethodDescriptor>(), testAbstract.methods)
         assertEquals(listOf<DependencyDescriptor>(), testAbstract.dependencies)
@@ -24,6 +26,7 @@ class ClassDescriptorGeneratorTest {
         assertEquals("abstract class", testAbstract.type)
         val testClass = classDescriptors.find { it.className == "TestClass" }
         requireNotNull(testClass)
+        if (testClass !is ClassDescriptor) throw RuntimeException("wrong type")
         assertEquals(listOf<FieldDescriptor>(), testClass.attributes)
         assertEquals(listOf<MethodDescriptor>(), testClass.methods)
         assertEquals(listOf<DependencyDescriptor>(), testClass.dependencies)
@@ -32,6 +35,7 @@ class ClassDescriptorGeneratorTest {
         assertEquals("class", testClass.type)
         val testInferface = classDescriptors.find { it.className == "TestInterface" }
         requireNotNull(testInferface)
+        if (testInferface !is ClassDescriptor) throw RuntimeException("wrong type")
         assertEquals(listOf<FieldDescriptor>(), testInferface.attributes)
         assertEquals(listOf<MethodDescriptor>(), testInferface.methods)
         assertEquals(listOf<DependencyDescriptor>(), testInferface.dependencies)
@@ -40,6 +44,7 @@ class ClassDescriptorGeneratorTest {
         assertEquals("interface", testInferface.type)
         val testUnrelated = classDescriptors.find { it.className == "TestUnrelated" }
         requireNotNull(testUnrelated)
+        if (testUnrelated !is ClassDescriptor) throw RuntimeException("wrong type")
         assertEquals(listOf<FieldDescriptor>(), testUnrelated.attributes)
         assertEquals(listOf<MethodDescriptor>(), testUnrelated.methods)
         assertEquals(listOf<DependencyDescriptor>(), testUnrelated.dependencies)
@@ -50,11 +55,13 @@ class ClassDescriptorGeneratorTest {
 
     @Test
     fun `test generation of class descriptors with everything turned on`() {
-        val generator = ClassDescriptorGenerator(directory, "testcase1", Visibility.PRIVATE, Visibility.PRIVATE, DependencyLevel.ALL, true)
+        val generator =
+            ClassDescriptorGenerator(directory, "testcase1", Visibility.PRIVATE, Visibility.PRIVATE, DependencyLevel.ALL, true, false)
         val classDescriptors = generator.generateClassDescriptors().toList()
         assertEquals(4, classDescriptors.size)
         val testAbstract = classDescriptors.find { it.className == "TestAbstract" }
         requireNotNull(testAbstract)
+        if (testAbstract !is ClassDescriptor) throw RuntimeException("wrong type")
         assertEquals(listOf<FieldDescriptor>(), testAbstract.attributes)
         assertEquals(listOf(MethodDescriptor("testAbstract(String)", AccessSpecifier.PUBLIC, "void")), testAbstract.methods)
         assertEquals(listOf(DependencyDescriptor("java.lang", "String")), testAbstract.dependencies)
@@ -64,6 +71,7 @@ class ClassDescriptorGeneratorTest {
         assertEquals("abstract class", testAbstract.type)
         val testClass = classDescriptors.find { it.className == "TestClass" }
         requireNotNull(testClass)
+        if (testClass !is ClassDescriptor) throw RuntimeException("wrong type")
         assertEquals(listOf<FieldDescriptor>(), testClass.attributes)
         assertEquals(
             listOf(
@@ -84,6 +92,7 @@ class ClassDescriptorGeneratorTest {
         assertEquals("class", testClass.type)
         val testInterface = classDescriptors.find { it.className == "TestInterface" }
         requireNotNull(testInterface)
+        if (testInterface !is ClassDescriptor) throw RuntimeException("wrong type")
         assertEquals(listOf<FieldDescriptor>(), testInterface.attributes)
         assertEquals(listOf(MethodDescriptor("test()", AccessSpecifier.PUBLIC, "int")), testInterface.methods)
         assertEquals(listOf<DependencyDescriptor>(), testInterface.dependencies)
@@ -93,6 +102,7 @@ class ClassDescriptorGeneratorTest {
         assertEquals("interface", testInterface.type)
         val testUnrelated = classDescriptors.find { it.className == "TestUnrelated" }
         requireNotNull(testUnrelated)
+        if (testUnrelated !is ClassDescriptor) throw RuntimeException("wrong type")
         assertEquals(listOf(FieldDescriptor("testNumber", "int", AccessSpecifier.PRIVATE)), testUnrelated.attributes)
         assertEquals(listOf(MethodDescriptor("test(String)", AccessSpecifier.PUBLIC, "String")), testUnrelated.methods)
         assertEquals(listOf(DependencyDescriptor("java.lang", "String")), testUnrelated.dependencies)
@@ -105,7 +115,7 @@ class ClassDescriptorGeneratorTest {
     @Test
     fun `test field visibility public`() {
         val generatorPublic =
-            ClassDescriptorGenerator(directory, "testcase2", Visibility.NONE, Visibility.PUBLIC, DependencyLevel.NONE, false)
+            ClassDescriptorGenerator(directory, "testcase2", Visibility.NONE, Visibility.PUBLIC, DependencyLevel.NONE, false, false)
         val classDescriptorsPublic = generatorPublic.generateClassDescriptors().toList()
         assertEquals(1, classDescriptorsPublic.size)
         val classPublic = classDescriptorsPublic[0]
@@ -117,7 +127,7 @@ class ClassDescriptorGeneratorTest {
     @Test
     fun `test field visibility package`() {
         val generatorPublic =
-            ClassDescriptorGenerator(directory, "testcase2", Visibility.NONE, Visibility.PACKAGE, DependencyLevel.NONE, false)
+            ClassDescriptorGenerator(directory, "testcase2", Visibility.NONE, Visibility.PACKAGE, DependencyLevel.NONE, false, false)
         val classDescriptorsPublic = generatorPublic.generateClassDescriptors().toList()
         assertEquals(1, classDescriptorsPublic.size)
         val classPublic = classDescriptorsPublic[0]
@@ -134,7 +144,7 @@ class ClassDescriptorGeneratorTest {
     @Test
     fun `test field visibility protected`() {
         val generatorPublic =
-            ClassDescriptorGenerator(directory, "testcase2", Visibility.NONE, Visibility.PROTECTED, DependencyLevel.NONE, false)
+            ClassDescriptorGenerator(directory, "testcase2", Visibility.NONE, Visibility.PROTECTED, DependencyLevel.NONE, false, false)
         val classDescriptorsPublic = generatorPublic.generateClassDescriptors().toList()
         assertEquals(1, classDescriptorsPublic.size)
         val classPublic = classDescriptorsPublic[0]
@@ -154,7 +164,7 @@ class ClassDescriptorGeneratorTest {
     @Test
     fun `test field visibility private`() {
         val generatorPublic =
-            ClassDescriptorGenerator(directory, "testcase2", Visibility.NONE, Visibility.PRIVATE, DependencyLevel.NONE, false)
+            ClassDescriptorGenerator(directory, "testcase2", Visibility.NONE, Visibility.PRIVATE, DependencyLevel.NONE, false, false)
         val classDescriptorsPublic = generatorPublic.generateClassDescriptors().toList()
         assertEquals(1, classDescriptorsPublic.size)
         val classPublic = classDescriptorsPublic[0]
@@ -177,7 +187,7 @@ class ClassDescriptorGeneratorTest {
     @Test
     fun `test method visibility public`() {
         val generatorPublic =
-            ClassDescriptorGenerator(directory, "testcase3", Visibility.PUBLIC, Visibility.NONE, DependencyLevel.NONE, false)
+            ClassDescriptorGenerator(directory, "testcase3", Visibility.PUBLIC, Visibility.NONE, DependencyLevel.NONE, false, false)
         val classDescriptorsPublic = generatorPublic.generateClassDescriptors().toList()
         assertEquals(1, classDescriptorsPublic.size)
         val classPublic = classDescriptorsPublic[0]
@@ -192,7 +202,7 @@ class ClassDescriptorGeneratorTest {
     @Test
     fun `test method visibility package`() {
         val generatorPublic =
-            ClassDescriptorGenerator(directory, "testcase3", Visibility.PACKAGE, Visibility.NONE, DependencyLevel.NONE, false)
+            ClassDescriptorGenerator(directory, "testcase3", Visibility.PACKAGE, Visibility.NONE, DependencyLevel.NONE, false, false)
         val classDescriptorsPublic = generatorPublic.generateClassDescriptors().toList()
         assertEquals(1, classDescriptorsPublic.size)
         val classPublic = classDescriptorsPublic[0]
@@ -209,7 +219,7 @@ class ClassDescriptorGeneratorTest {
     @Test
     fun `test method visibility protected`() {
         val generatorPublic =
-            ClassDescriptorGenerator(directory, "testcase3", Visibility.PROTECTED, Visibility.NONE, DependencyLevel.NONE, false)
+            ClassDescriptorGenerator(directory, "testcase3", Visibility.PROTECTED, Visibility.NONE, DependencyLevel.NONE, false, false)
         val classDescriptorsPublic = generatorPublic.generateClassDescriptors().toList()
         assertEquals(1, classDescriptorsPublic.size)
         val classPublic = classDescriptorsPublic[0]
@@ -229,7 +239,7 @@ class ClassDescriptorGeneratorTest {
     @Test
     fun `test method visibility private`() {
         val generatorPublic =
-            ClassDescriptorGenerator(directory, "testcase3", Visibility.PRIVATE, Visibility.NONE, DependencyLevel.NONE, false)
+            ClassDescriptorGenerator(directory, "testcase3", Visibility.PRIVATE, Visibility.NONE, DependencyLevel.NONE, false, false)
         val classDescriptorsPublic = generatorPublic.generateClassDescriptors().toList()
         assertEquals(1, classDescriptorsPublic.size)
         val classPublic = classDescriptorsPublic[0]
@@ -249,7 +259,37 @@ class ClassDescriptorGeneratorTest {
             classPublic.methods.find { it.signature.contains("testPrivate") })
     }
 
+    @Test
+    fun `test enum with arguments`() {
+        val generatorPublic =
+            ClassDescriptorGenerator(directory, "testcase4", Visibility.PRIVATE, Visibility.PRIVATE, DependencyLevel.NONE, false, true)
+        val enumDescriptors = generatorPublic.generateClassDescriptors().toList()
+        assertEquals(1, enumDescriptors.size)
+        val enumDescriptor = enumDescriptors[0] as? EnumDescriptor ?: throw RuntimeException("wrong type")
+        assertEquals("TestEnum", enumDescriptor.className)
+        assertEquals(1, enumDescriptor.methods.size)
+        assertEquals(MethodDescriptor("getTest()", AccessSpecifier.PUBLIC, "String"), enumDescriptor.methods[0])
+        assertEquals(ValueDescriptor("A", "\"TestA\""), enumDescriptor.values[0])
+        assertEquals(ValueDescriptor("B", "\"TestB\""), enumDescriptor.values[1])
+    }
+
+    @Test
+    fun `test enum without arguments`() {
+        val generatorPublic =
+            ClassDescriptorGenerator(directory, "testcase4", Visibility.PRIVATE, Visibility.PRIVATE, DependencyLevel.NONE, false, false)
+        val enumDescriptors = generatorPublic.generateClassDescriptors().toList()
+        assertEquals(1, enumDescriptors.size)
+        val enumDescriptor = enumDescriptors[0] as? EnumDescriptor ?: throw RuntimeException("wrong type")
+        assertEquals("TestEnum", enumDescriptor.className)
+        assertEquals(1, enumDescriptor.methods.size)
+        assertEquals(MethodDescriptor("getTest()", AccessSpecifier.PUBLIC, "String"), enumDescriptor.methods[0])
+        assertEquals(ValueDescriptor("A", ""), enumDescriptor.values[0])
+        assertEquals(ValueDescriptor("B", ""), enumDescriptor.values[1])
+    }
+
     private fun getResourcesDir(): File {
         return File("src/test/resources")
     }
+
+
 }

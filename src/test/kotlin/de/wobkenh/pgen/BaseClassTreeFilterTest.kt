@@ -12,7 +12,7 @@ class BaseClassTreeFilterTest {
         val extendClass2 = createTestClassDescriptor("class2", "class", "Exception")
         val unrelatedClass = createTestClassDescriptor("unrelatedClass", "class", "OtherClass")
         val unrelatedClass2 = createTestClassDescriptor("UnrelatedClass2", "class", "")
-        val list: List<ClassDescriptor> = BaseClassTreeFilter.filterForBaseClass(
+        val list: List<ClassOrEnumDescriptor> = BaseClassTreeFilter.filterForBaseClass(
             sequenceOf(baseClass, extendClass, extendClass2, unrelatedClass, unrelatedClass2),
             "Exception"
         ).toList()
@@ -24,5 +24,5 @@ class BaseClassTreeFilterTest {
     }
 
     private fun createTestClassDescriptor(name: String, type: String, extendName: String): ClassDescriptor =
-        ClassDescriptor("", name, type, ExtendsDescriptor("", extendName), listOf(), listOf(), listOf(), listOf())
+        ClassDescriptor("", name, listOf(), listOf(), listOf(), listOf(), type, ExtendsDescriptor("", extendName))
 }
