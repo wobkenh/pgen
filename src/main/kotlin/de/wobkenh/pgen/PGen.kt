@@ -14,11 +14,10 @@ class PGen : CliktCommand() {
     private val logger = LoggerFactory.getLogger("")
 
     // CLI Arguments
-    private val directory: File by option(help = "Sources root directory (REQUIRED)").file().required()
+    private val directories: List<File> by option(help = "Directories with java files to analyze (REQUIRED)").file().multiple(required = true)
     private val outputFile: File by option(help = "Output file for PUML Class Diagram. Default output.puml").file().default(
         File("output.puml")
     )
-    private val packagePath: String by option(help = "The package to analyze (OPTIONAL)").default("")
     private val methodVisibility: Visibility by option(help = "Which methods to show. Default NONE").convert { it.toUpperCase() }.choice(
         "NONE" to Visibility.NONE,
         "PRIVATE" to Visibility.PRIVATE,
@@ -63,15 +62,17 @@ class PGen : CliktCommand() {
             if (outputFile.isFile) {
                 logger.info("Output file already exists. It will be overwritten")
             } else {
-                logger.info("Output file already exists and is not a file.")
+                logger.error("Output file already exists and is not a file.")
                 exitProcess(1)
             }
         }
 
+        // every file must be the java folder or any child directory of the java folder
+        val correctedDirectories = correctDirectories(directories)
+
         var classDescriptors =
             ClassDescriptorGenerator(
-                directory,
-                packagePath,
+                correctedDirectories,
                 methodVisibility,
                 attributeVisibility,
                 dependencyLevel,
@@ -87,7 +88,7 @@ class PGen : CliktCommand() {
         val pumlBody = PumlBodyGenerator(showPackage, showEnumArguments).generatePumlBody(classDescriptors)
         PumlWriter.writePuml(
             pumlBody,
-            packagePath,
+            correctedDirectories,
             attributeVisibility,
             methodVisibility,
             scale,
@@ -96,6 +97,34 @@ class PGen : CliktCommand() {
             leftToRightDirection,
             outputFile
         )
+    }
+
+    private fun correctDirectories(directories: List<File>): List<File> =
+        directories.map {
+            checkDirectory(it)
+            if (!it.absolutePath.contains("src(/|\\\\)main(/|\\\\)java")) {
+                val childPath = when (it.name) {
+                    "main" -> "java"
+                    "src" -> "main/java"
+                    else -> "src/main/java"
+                }
+                val file = File(it, childPath)
+                this.logger.warn("Corrected ${it.absolutePath} to ${file.absolutePath}")
+                checkDirectory(file)
+                file
+            } else {
+                it
+            }
+        }
+
+    private fun checkDirectory(file: File) {
+        if (!file.exists()) {
+            logger.error("Directory ${file.absolutePath} does not exist.")
+            exitProcess(1)
+        } else if (!file.isDirectory) {
+            logger.error("${file.absolutePath} is not a directory.")
+            exitProcess(1)
+        }
     }
 
     private fun setLogLevel() {
@@ -111,12 +140,11 @@ class PGen : CliktCommand() {
     }
 
     private fun printSettings() {
-        logger.info("Generating PUML Class Diagram for classes in package path $packagePath")
+        logger.info("Generating PUML Class Diagram")
         logger.info("Using ${outputFile.absolutePath} as output path")
-
+        logger.info("# Using Directories:")
+        directories.forEach { logger.info("# # ${it.absolutePath}") }
         logger.info("Using Options:")
-        logger.info("# Package Path $packagePath")
-        logger.info("# Directory $packagePath")
         logger.info("# OutputFile ${outputFile.absolutePath}")
         logger.info("# Method Visibility $methodVisibility")
         logger.info("# Attribute Visibility $attributeVisibility")

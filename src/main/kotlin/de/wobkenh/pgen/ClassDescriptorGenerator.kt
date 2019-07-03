@@ -17,25 +17,26 @@ import org.slf4j.LoggerFactory
 import java.io.File
 
 class ClassDescriptorGenerator(
-    private val directory: File?,
-    private val packagePath: String,
+    private val directories: List<File>,
     private val methodVisibility: Visibility,
     private val attributeVisibility: Visibility,
     private val dependencyLevel: DependencyLevel,
     private val showPackage: Boolean,
     private val showEnumArguments: Boolean
 ) {
-    private val fileSeparator = File.separator
     private val logger = LoggerFactory.getLogger("")
 
+    init {
+        StaticJavaParser.getConfiguration().setSymbolResolver(getSymbolResolver())
+    }
+
     fun generateClassDescriptors(): Sequence<ClassOrEnumDescriptor> =
-        File(directory, packagePath.replace(".", fileSeparator)).walk()
-            .filter { it.isFile && it.extension == "java" }
-            .flatMap { file -> generateClassDescriptor(file).asSequence() }
+        directories
+            .flatMap { dir -> dir.walk().filter { it.isFile && it.extension == "java" }.toList() }
+            .flatMap { file -> generateClassDescriptor(file) }.asSequence()
 
     private fun generateClassDescriptor(file: File): List<ClassOrEnumDescriptor> {
         logger.trace("Generating descriptor for ${file.absolutePath}")
-        StaticJavaParser.getConfiguration().setSymbolResolver(getSymbolResolver())
         val compilationUnit = StaticJavaParser.parse(file)
         val packageName = compilationUnit.packageDeclaration.get().nameAsString
 
@@ -157,7 +158,7 @@ class ClassDescriptorGenerator(
     private fun getSymbolResolver(): JavaSymbolSolver {
         val typeSolvers = mutableListOf<TypeSolver>()
         if (dependencyLevel >= DependencyLevel.INTERNAL || showPackage) {
-            typeSolvers.add(JavaParserTypeSolver(directory))
+            typeSolvers.addAll(directories.map { JavaParserTypeSolver(it.parentFile) })
         }
         if (dependencyLevel >= DependencyLevel.EXTERNAL) {
             // TODO: Add external libraries
