@@ -35,6 +35,12 @@ public abstract class ClassOrEnumDescriptor(
         result = 31 * result + implementedClasses.hashCode()
         return result
     }
+
+    override fun toString(): String {
+        return "ClassOrEnumDescriptor(packageName='$packageName', className='$className', methods=$methods, attributes=$attributes, dependencies=$dependencies, implementedClasses=$implementedClasses)"
+    }
+
+
 }
 
 public class EnumDescriptor(
@@ -65,6 +71,12 @@ public class EnumDescriptor(
         result = 31 * result + super.hashCode()
         return result
     }
+
+    override fun toString(): String {
+        return "EnumDescriptor(${super.toString()}, values=$values)"
+    }
+
+
 }
 
 public class ClassDescriptor(
@@ -97,6 +109,12 @@ public class ClassDescriptor(
         result = 31 * result + super.hashCode()
         return result
     }
+
+    override fun toString(): String {
+        return "ClassDescriptor(${super.toString()}, type='$type', extendedClass=$extendedClass)"
+    }
+
+
 }
 
 data class MethodDescriptor(

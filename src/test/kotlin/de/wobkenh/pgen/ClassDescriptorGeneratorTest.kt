@@ -371,6 +371,52 @@ class ClassDescriptorGeneratorTest {
         assertEquals(ValueDescriptor("B", ""), enumDescriptor.values[1])
     }
 
+    @Test
+    fun `test inner class`() {
+        val innerClassDescriptors =
+            ClassDescriptorGenerator(
+                listOf(File(directory, "testcase5")),
+                Visibility.PRIVATE,
+                Visibility.PRIVATE,
+                DependencyLevel.NONE,
+                false,
+                false
+            ).generateClassDescriptors().toList()
+        assertEquals(3, innerClassDescriptors.size)
+        val testFrame = innerClassDescriptors.find { it.className == "InnerClassTest" }
+        requireNotNull(testFrame)
+        if (testFrame !is ClassDescriptor) throw RuntimeException("wrong type")
+        assertEquals("testcase5", testFrame.packageName)
+        assertEquals(listOf<FieldDescriptor>(), testFrame.attributes)
+        assertEquals(listOf<MethodDescriptor>(), testFrame.methods)
+        assertEquals(listOf<DependencyDescriptor>(), testFrame.dependencies)
+        assertEquals(ExtendsDescriptor("", ""), testFrame.extendedClass)
+        assertEquals(listOf<ImplementsDescriptor>(), testFrame.implementedClasses)
+        assertEquals("class", testFrame.type)
+
+        val testBase = innerClassDescriptors.find { it.className == "ExceptionBase" }
+        requireNotNull(testBase)
+        if (testBase !is ClassDescriptor) throw RuntimeException("wrong type")
+        assertEquals("testcase5.InnerClassTest", testBase.packageName)
+        assertEquals(listOf<FieldDescriptor>(), testBase.attributes)
+        assertEquals(listOf<MethodDescriptor>(), testBase.methods)
+        assertEquals(listOf<DependencyDescriptor>(), testBase.dependencies)
+        assertEquals(ExtendsDescriptor("", "Exception"), testBase.extendedClass)
+        assertEquals(listOf<ImplementsDescriptor>(), testBase.implementedClasses)
+        assertEquals("class", testBase.type)
+
+        val testExtend = innerClassDescriptors.find { it.className == "ExceptionExtend" }
+        requireNotNull(testExtend)
+        if (testExtend !is ClassDescriptor) throw RuntimeException("wrong type")
+        assertEquals("testcase5.InnerClassTest", testExtend.packageName)
+        assertEquals(listOf(FieldDescriptor("code", "String", AccessSpecifier.PRIVATE)), testExtend.attributes)
+        assertEquals(listOf(MethodDescriptor("getCode()", AccessSpecifier.PUBLIC, "String")), testExtend.methods)
+        assertEquals(listOf<DependencyDescriptor>(), testExtend.dependencies)
+        assertEquals(ExtendsDescriptor("testcase5.InnerClassTest", "ExceptionBase"), testExtend.extendedClass)
+        assertEquals(listOf<ImplementsDescriptor>(), testExtend.implementedClasses)
+        assertEquals("class", testExtend.type)
+    }
+
     private fun getResourcesDir(): File {
         return File("src/test/resources")
     }

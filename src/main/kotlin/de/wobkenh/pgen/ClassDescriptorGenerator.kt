@@ -6,6 +6,7 @@ import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration
 import com.github.javaparser.ast.body.EnumDeclaration
 import com.github.javaparser.ast.nodeTypes.NodeWithImplements
 import com.github.javaparser.ast.nodeTypes.NodeWithMembers
+import com.github.javaparser.ast.nodeTypes.NodeWithSimpleName
 import com.github.javaparser.ast.type.ClassOrInterfaceType
 import com.github.javaparser.resolution.UnsolvedSymbolException
 import com.github.javaparser.symbolsolver.JavaSymbolSolver
@@ -62,7 +63,7 @@ class ClassDescriptorGenerator(
 
             logger.debug("parsed ${clazz.nameAsString}")
             ClassDescriptor(
-                packageName,
+                packageName + getParentClasses(clazz),
                 clazz.nameAsString,
                 methods,
                 attributes,
@@ -96,6 +97,24 @@ class ClassDescriptorGenerator(
                 values
             )
         }).toList()
+    }
+
+    private fun getParentClasses(classInterfaceOrEnum: Node): String {
+        val parents = mutableListOf<String>()
+        var node = classInterfaceOrEnum
+        while (node.parentNode.isPresent) {
+            node = node.parentNode.get()
+            if (node !is NodeWithSimpleName<*>) {
+                break
+            }
+            parents.add(node.nameAsString)
+        }
+        val parentsStr = parents.reversed().joinToString(".")
+        return if (parentsStr.isEmpty()) {
+            ""
+        } else {
+            ".$parentsStr"
+        }
     }
 
     private fun getImplementedClassesClass(node: NodeWithImplements<ClassOrInterfaceDeclaration>) = getImplementedClassesBase(node)
