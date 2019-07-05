@@ -23,11 +23,12 @@ This will output the help:
 
 ```
 Usage: pgen [OPTIONS]
+
 Options:
-  --directory PATH                 Sources root directory (REQUIRED)
+  --directories PATH               Directories with java files to analyze
+                                   (REQUIRED)
   --output-file PATH               Output file for PUML Class Diagram. Default
                                    output.puml
-  --package-path TEXT              The package to analyze (OPTIONAL)
   --method-visibility [NONE|PRIVATE|PACKAGE|PROTECTED|PUBLIC]
                                    Which methods to show. Default NONE
   --attribute-visibility [NONE|PRIVATE|PACKAGE|PROTECTED|PUBLIC]
@@ -43,11 +44,14 @@ Options:
   --left-to-right-direction        Changes the direction of the diagram to
                                    'left to right'. Default 'top to bottom'
   --show-package                   Show packages, Default false
+  --show-enum-arguments            Show arguments of enum entries (values for
+                                   constructor), Default false
   --dependency-level [NONE|INTERNAL|EXTERNAL|ALL]
                                    Which dependencies to show in the diagram
   --debug                          Debug log level
   --trace                          Trace log level
   -h, --help                       Show this message and exit
+
 ```
 
 A few notes here:
