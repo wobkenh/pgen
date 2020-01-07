@@ -15,6 +15,10 @@ class PGen : CliktCommand() {
 
     // CLI Arguments
     private val directories: List<File> by option(help = "Directories with java files to analyze (REQUIRED)").file().multiple(required = true)
+    // TODO: Limit packages if list is not empty
+    private val packages: List<String> by option(help = "(Optional) Limits the search to these Java Packages. However, dependency lookup is not affected and will continue to use the supplied directories").multiple()
+    // TODO: Exclude Packages if list is not empty
+    private val excludePackages: List<String> by option(help = "(Optional) Items from these packages will not be included no matter if it is in a file in one of the directories or simply a dependency.").multiple()
     private val outputFile: File by option(help = "Output file for PUML Class Diagram. Default output.puml").file().default(
         File("output.puml")
     )
@@ -54,6 +58,8 @@ class PGen : CliktCommand() {
     private val debug: Boolean by option(help = "Debug log level").flag(default = false)
     private val trace: Boolean by option(help = "Trace log level").flag(default = false)
 
+    data class Scope(val directories: List<File>, val packages: List<String>, val excludePackages: List<String>)
+
 
     override fun run() {
         setLogLevel()
@@ -69,10 +75,10 @@ class PGen : CliktCommand() {
 
         // every file must be the java folder or any child directory of the java folder
         val correctedDirectories = correctDirectories(directories)
-
+        val scope = Scope(correctedDirectories, packages, excludePackages)
         var classDescriptors =
             ClassDescriptorGenerator(
-                correctedDirectories,
+                scope,
                 methodVisibility,
                 attributeVisibility,
                 dependencyLevel,
@@ -102,7 +108,7 @@ class PGen : CliktCommand() {
     private fun correctDirectories(directories: List<File>): List<File> =
         directories.map {
             checkDirectory(it)
-            if (!it.absolutePath.contains("src(/|\\\\)main(/|\\\\)java")) {
+            if (!it.absolutePath.contains(Regex("src[/\\\\]main[/\\\\]java"))) {
                 val childPath = when (it.name) {
                     "main" -> "java"
                     "src" -> "main/java"
