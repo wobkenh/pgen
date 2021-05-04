@@ -14,9 +14,7 @@ P/Gen is a fairly new project, so it is still under heavy construction.
 
 ## Usage
 
-[You can download the pgen jar here.](https://simplex24.de/pgen/pgen.jar) Then simply call `pgen.jar` using `java -jar`. 
-
-Alternatively, you can clone this repository and build/run P/Gen using Gradle or your IDE.
+You can get the pgen jar by cloning this repository build/run P/Gen using Gradle or your IDE. If using gradle, then simply call the resulting `pgen.jar` using `java -jar`. 
 
 To get a quick overview of all available parameters, use the --help program option.
 This will output the help:
